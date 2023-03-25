@@ -1,48 +1,32 @@
-#[cfg(target_os="linux")]
+extern crate glium;
 
-extern crate sdl2;
+fn main() {
+    use glium::{glutin, Surface};
 
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
-use std::time::Duration;
+    let event_loop = glutin::event_loop::EventLoop::new();
+    let wb = glutin::window::WindowBuilder::new();
+    let cb = glutin::ContextBuilder::new();
+    let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
-fn main()  -> Result<(), String> {
-    let sdl_context = sdl2::init()?;
-    let video_subsystem = sdl_context.video()?;
+    event_loop.run(move |ev, _, control_flow| {
 
-    let window = video_subsystem
-        .window("Learn OpenGL", 800, 600)
-        .position_centered()
-        .opengl()
-        .build()
-        .map_err(|e| e.to_string())?;
+        let mut target = display.draw();
+        target.clear_color(0.0, 0.0, 1.0, 1.0);
+        target.finish().unwrap();
 
-    let mut canvas = window.into_canvas().build().map_err(|e| e.to_string())?;
+        let next_frame_time = std::time::Instant::now() +
+            std::time::Duration::from_nanos(16_666_667);
 
-    canvas.set_draw_color(Color::RGB(255, 0, 0));
-    canvas.clear();
-    canvas.present();
-
-    let mut event_pump = sdl_context.event_pump()?;
-
-    'running: loop {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => break 'running,
-                _ => {}
-            }
+        *control_flow = glutin::event_loop::ControlFlow::WaitUntil(next_frame_time);
+        match ev {
+            glutin::event::Event::WindowEvent { event, .. } => match event {
+                glutin::event::WindowEvent::CloseRequested => {
+                    *control_flow = glutin::event_loop::ControlFlow::Exit;
+                    return;
+                },
+                _ => return,
+            },
+            _ => (),
         }
-
-        canvas.clear();
-        canvas.present();
-        ::std::thread::sleep(Duration::new(0, 1_000_000_000u32 / 30));
-        // The rest of the game loop goes here...
-    }
-
-    Ok(())
+    });
 }
